@@ -1,7 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+// FIX 1: Imported 'Browsers' to safely disguise the bot
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode');
 
@@ -30,8 +31,10 @@ async function connectToWhatsApp() {
   sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
-    logger: pino({ level: 'silent' }),
-    browser: ['Task Reminder Bot', 'Chrome', '1.0.0'],
+    // FIX 2: Set to 'error' so Render logs will show us the exact crash reason
+    logger: pino({ level: 'error' }),
+    // FIX 3: Use the official Baileys browser disguise to bypass WhatsApp anti-spam
+    browser: Browsers.ubuntu('Chrome'),
     getMessage: async () => undefined
   });
 
@@ -47,10 +50,12 @@ async function connectToWhatsApp() {
 
     if (connection === 'close') {
       isClientReady = false;
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       if (shouldReconnect) {
-        console.log('[WHATSAPP] Connection dropped. Reconnecting in 5 seconds...');
+        // Improved logging so we can see the exact error code that caused the drop
+        console.log(`[WHATSAPP] Connection dropped (Code: ${statusCode}). Reconnecting in 5 seconds...`);
         sock?.ev?.removeAllListeners();
         setTimeout(() => connectToWhatsApp(), 5000);
       } else {
@@ -66,6 +71,10 @@ async function connectToWhatsApp() {
 }
 
 connectToWhatsApp();
+
+// FIX 4: Added safety nets to catch and log any silent background crashes
+process.on('unhandledRejection', (reason) => console.error('[UNHANDLED REJECTION]', reason));
+process.on('uncaughtException', (err) => console.error('[UNCAUGHT EXCEPTION]', err));
 
 // --- EXPRESS ROUTES ---
 
