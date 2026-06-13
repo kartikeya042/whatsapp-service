@@ -40,7 +40,7 @@ async function connectToWhatsApp() {
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'error' }),
-    browser: Browsers.ubuntu('Chrome'),
+    browser: ['Windows', 'Chrome', '110.0.5481.177'],
     getMessage: async () => undefined
   });
 
