@@ -1,8 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-// FIX 1: Imported 'Browsers' to safely disguise the bot
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+// FIX 1: Import fetchLatestBaileysVersion
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode');
 
@@ -28,12 +28,18 @@ function formatWhatsAppNumber(mobile) {
 async function connectToWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
+  // FIX 2: Dynamically pull the absolute latest WhatsApp Web version
+  const { version, isLatest } = await fetchLatestBaileysVersion();
+  console.log(`[WHATSAPP] Booting with WA version: ${version.join('.')}`);
+
+  // FIX 3: Add a fallback hardcoded version specifically known to bypass the 405 error
+  const waVersion = version || [2, 3000, 1033893291];
+
   sock = makeWASocket({
+    version: waVersion, // <--- THIS IS THE MAGIC KEY
     auth: state,
     printQRInTerminal: false,
-    // FIX 2: Set to 'error' so Render logs will show us the exact crash reason
     logger: pino({ level: 'error' }),
-    // FIX 3: Use the official Baileys browser disguise to bypass WhatsApp anti-spam
     browser: Browsers.ubuntu('Chrome'),
     getMessage: async () => undefined
   });
@@ -54,7 +60,6 @@ async function connectToWhatsApp() {
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       if (shouldReconnect) {
-        // Improved logging so we can see the exact error code that caused the drop
         console.log(`[WHATSAPP] Connection dropped (Code: ${statusCode}). Reconnecting in 5 seconds...`);
         sock?.ev?.removeAllListeners();
         setTimeout(() => connectToWhatsApp(), 5000);
@@ -72,7 +77,6 @@ async function connectToWhatsApp() {
 
 connectToWhatsApp();
 
-// FIX 4: Added safety nets to catch and log any silent background crashes
 process.on('unhandledRejection', (reason) => console.error('[UNHANDLED REJECTION]', reason));
 process.on('uncaughtException', (err) => console.error('[UNCAUGHT EXCEPTION]', err));
 
