@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Standalone WhatsApp messaging microservice",
   "main": "server.js",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
