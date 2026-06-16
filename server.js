@@ -41,7 +41,13 @@ async function connectToWhatsApp() {
     printQRInTerminal: false,
     logger: pino({ level: 'error' }),
     browser: Browsers.macOS('Chrome'),
-    getMessage: async () => undefined
+    
+    // --- RENDER FEATHERWEIGHT CONFIGURATION ---
+    syncFullHistory: false, // Stops the massive memory spike
+    markOnlineOnConnect: false, // Saves background processing
+    generateHighQualityLinkPreview: false, // Prevents memory leaks on URLs
+    getMessage: async () => ({ conversation: 'hello' }) // Safe fallback for missing messages
+    // ------------------------------------------
   });
 
   sock.ev.on('creds.update', saveCreds);
