@@ -36,17 +36,21 @@ async function connectToWhatsApp() {
   const waVersion = version || [2, 3000, 1033893291];
 
   sock = makeWASocket({
-    version: waVersion, // <--- THIS IS THE MAGIC KEY
+    version: waVersion, 
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'error' }),
     browser: Browsers.macOS('Chrome'),
     
     // --- RENDER FEATHERWEIGHT CONFIGURATION ---
-    syncFullHistory: false, // Stops the massive memory spike
-    markOnlineOnConnect: false, // Saves background processing
-    generateHighQualityLinkPreview: false, // Prevents memory leaks on URLs
-    getMessage: async () => ({ conversation: 'hello' }) // Safe fallback for missing messages
+    syncFullHistory: false, 
+    markOnlineOnConnect: false, 
+    generateHighQualityLinkPreview: false, 
+    getMessage: async () => ({ conversation: 'hello' }),
+    
+    // --> NEW: Give Render's slow CPU more time to process the initial data dump <--
+    defaultQueryTimeoutMs: 120000, // Wait 2 full minutes instead of 60 seconds
+    keepAliveIntervalMs: 30000,    // Send a ping every 30s to keep the socket open
     // ------------------------------------------
   });
 
