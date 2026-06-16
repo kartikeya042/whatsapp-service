@@ -39,7 +39,7 @@ async function connectToWhatsApp() {
     version: waVersion, 
     auth: state,
     printQRInTerminal: false,
-    logger: pino({ level: 'error' }),
+    logger: pino({ level: 'error' }), // Only prints critical errors
     browser: Browsers.macOS('Chrome'),
     
     // --- RENDER FEATHERWEIGHT CONFIGURATION ---
@@ -47,10 +47,14 @@ async function connectToWhatsApp() {
     markOnlineOnConnect: false, 
     generateHighQualityLinkPreview: false, 
     getMessage: async () => ({ conversation: 'hello' }),
+    keepAliveIntervalMs: 30000,
     
-    // --> NEW: Give Render's slow CPU more time to process the initial data dump <--
-    defaultQueryTimeoutMs: 120000, // Wait 2 full minutes instead of 60 seconds
-    keepAliveIntervalMs: 30000,    // Send a ping every 30s to keep the socket open
+    // --> THE NUCLEAR OPTION <--
+    // Skips the blocklist/privacy sync that is timing out and crashing Render
+    fireInitQueries: false, 
+    
+    // Prevents Render from crashing when people post heavy WhatsApp Statuses
+    ignoreAllBroadcasts: true 
     // ------------------------------------------
   });
 
