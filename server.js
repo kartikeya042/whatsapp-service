@@ -2,9 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 // FIX 1: Import fetchLatestBaileysVersion
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion, makeInMemoryStore } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode');
+
+// Initialize the memory store
+const store = makeInMemoryStore({});
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -36,27 +39,39 @@ async function connectToWhatsApp() {
   const waVersion = version || [2, 3000, 1033893291];
 
   sock = makeWASocket({
-    version: waVersion, 
+    version: waVersion,
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'error' }), // Only prints critical errors
     browser: Browsers.macOS('Chrome'),
-    
+
     // --- RENDER FEATHERWEIGHT CONFIGURATION ---
-    syncFullHistory: false, 
-    markOnlineOnConnect: false, 
-    generateHighQualityLinkPreview: false, 
-    getMessage: async () => ({ conversation: 'hello' }),
+    syncFullHistory: false,
+    markOnlineOnConnect: false,
+    generateHighQualityLinkPreview: false,
+    getMessage: async (key) => {
+      if (store) {
+        const msg = await store.loadMessage(key.remoteJid, key.id);
+        if (msg?.message) {
+          return msg.message;
+        }
+      }
+      // Fallback so it doesn't send a random word.
+      return { conversation: 'You have a new task reminder! Please check your email for the full details.' };
+    },
     keepAliveIntervalMs: 30000,
-    
+
     // --> THE NUCLEAR OPTION <--
     // Skips the blocklist/privacy sync that is timing out and crashing Render
-    fireInitQueries: false, 
-    
+    fireInitQueries: false,
+
     // Prevents Render from crashing when people post heavy WhatsApp Statuses
-    ignoreAllBroadcasts: true 
+    ignoreAllBroadcasts: true
     // ------------------------------------------
   });
+
+  // --- CRITICAL FIX: Bind the store to the socket ---
+  store.bind(sock.ev);
 
   sock.ev.on('creds.update', saveCreds);
 
