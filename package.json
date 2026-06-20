@@ -11,10 +11,11 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "@whiskeysockets/baileys": "^6.7.5",
+    "multer": "^2.2.0",
     "pino": "^8.21.0",
     "qrcode": "^1.5.3"
   }

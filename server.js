@@ -10,6 +10,9 @@ const {
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcode = require('qrcode');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 
 // ---------------------------------------------------------------------------
 // Simple in-memory message cache.
@@ -191,6 +194,38 @@ app.post('/send-message', async (req, res) => {
   } catch (err) {
     console.error('[WHATSAPP] Send failed:', err.message);
     return res.status(500).json({ message: 'Failed to send message', error: err.message });
+  }
+});
+
+app.post('/send-document', upload.single('file'), async (req, res) => {
+  const { mobile, message, fileName } = req.body;
+  const fileBuffer = req.file?.buffer;
+
+  if (!isClientReady) {
+    return res.status(503).json({ message: 'WhatsApp client not ready.' });
+  }
+  if (!mobile || !fileBuffer) {
+    return res.status(400).json({ message: 'mobile and file upload required' });
+  }
+
+  try {
+    const formattedNumber = formatWhatsAppNumber(mobile);
+
+    if (message) {
+      await sock.sendMessage(formattedNumber, { text: message });
+      await new Promise(resolve => setTimeout(resolve, 2500)); // Safety delay
+    }
+
+    await sock.sendMessage(formattedNumber, { 
+        document: fileBuffer, 
+        mimetype: 'application/pdf', 
+        fileName: fileName || 'Clinic_Document.pdf' 
+    });
+
+    return res.status(200).json({ success: true, to: formattedNumber });
+  } catch (err) {
+    console.error('[WA DOC ERROR]:', err.message);
+    return res.status(500).json({ error: err.message });
   }
 });
 
